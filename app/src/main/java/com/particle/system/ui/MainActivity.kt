@@ -3,6 +3,7 @@ package com.particle.system.ui
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import com.particle.system.gl.ParticleSurfaceView
 import com.particle.system.input.TouchInputManager
@@ -12,10 +13,15 @@ import java.net.NetworkInterface
 
 class MainActivity : AppCompatActivity() {
 
+    // ── Grid flags — change these to control grid visibility and instrument ──
+    private val SHOW_NOTE_GRID    = true
+    private val SENDER_INSTRUMENT = "guitar"  // "guitar", "bass", "drums", "sync"
+
     private lateinit var surfaceView: ParticleSurfaceView
     private lateinit var server: BroadcastServer
     private lateinit var inputManager: TouchInputManager
     private lateinit var discoveryClient: DiscoveryClient
+    private lateinit var noteGridView: NoteGridView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         val sw = dm.widthPixels.toFloat()
         val sh = dm.heightPixels.toFloat()
 
-        val prefs = getSharedPreferences("particle_prefs", MODE_PRIVATE)
+        val prefs    = getSharedPreferences("particle_prefs", MODE_PRIVATE)
         val deviceId = prefs.getString("device_id", null) ?: run {
             java.util.UUID.randomUUID().toString().also {
                 prefs.edit().putString("device_id", it).apply()
@@ -56,6 +62,14 @@ class MainActivity : AppCompatActivity() {
         android.util.Log.d("MainActivity", "Local IP: $localIp")
         discoveryClient.start(localIp)
 
+        // ── Note grid ────────────────────────────────────────────────────────
+        noteGridView = NoteGridView(this).apply {
+            chromaticMode = SENDER_INSTRUMENT == "sync"
+            bassMode      = SENDER_INSTRUMENT == "bass"
+            drumMode      = SENDER_INSTRUMENT == "drums"
+            visibility    = if (SHOW_NOTE_GRID) View.VISIBLE else View.GONE
+        }
+
         inputManager = TouchInputManager(
             screenW  = sw,
             screenH  = sh,
@@ -68,8 +82,28 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        surfaceView = ParticleSurfaceView(this, inputManager)
-        setContentView(surfaceView)
+        surfaceView = ParticleSurfaceView(
+            context      = this,
+            inputManager = inputManager,
+            onTouchDown  = { normX, normY ->
+                if (SHOW_NOTE_GRID) {
+                    runOnUiThread {
+                        when (SENDER_INSTRUMENT) {
+                            "sync"   -> noteGridView.highlightCell(normX, normY)
+                            "bass"   -> noteGridView.highlightBassCell(normX, normY)
+                            "drums"  -> noteGridView.highlightDrumCell(normX, normY)
+                            else     -> noteGridView.highlightOneShotCell(normX, normY)
+                        }
+                    }
+                }
+            }
+        )
+
+        val root = FrameLayout(this).apply {
+            addView(surfaceView)
+            addView(noteGridView)
+        }
+        setContentView(root)
     }
 
     private fun getLocalIpAddress(): String? {

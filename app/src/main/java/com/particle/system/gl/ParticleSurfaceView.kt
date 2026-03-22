@@ -9,7 +9,8 @@ import com.particle.system.particle.ParticleSystem
 
 class ParticleSurfaceView(
     context: Context,
-    private val inputManager: TouchInputManager
+    private val inputManager: TouchInputManager,
+    private val onTouchDown: ((normX: Float, normY: Float) -> Unit)? = null
 ) : GLSurfaceView(context) {
     private var lastTouchX = 0f
     private var lastTouchY = 0f
@@ -41,9 +42,8 @@ class ParticleSurfaceView(
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
                 val x = event.getX(idx)
                 val y = event.getY(idx)
-                lastTouchX = x
-                lastTouchY = y
                 val pressure = event.getPressure(idx)
+                onTouchDown?.invoke(x / screenW, y / screenH)
                 queueEvent { emitter.onTouchDown(x, y, pressure) }
             }
             MotionEvent.ACTION_MOVE -> {
