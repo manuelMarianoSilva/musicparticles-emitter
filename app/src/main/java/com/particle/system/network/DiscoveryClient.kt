@@ -67,9 +67,10 @@ class DiscoveryClient(
 
         // Separate socket for broadcasting DISCOVER
         scope.launch {
-            val sendSocket = DatagramSocket().apply { broadcast = true }
-            val broadcastAddr = InetAddress.getByName(getSubnetBroadcast(localIp))
-            android.util.Log.d("DiscoveryClient", "Broadcasting to ${broadcastAddr.hostAddress}")
+            val multicastGroup = InetAddress.getByName("239.255.0.1")
+            val sendSocket = java.net.MulticastSocket().apply {
+                timeToLive = 4
+            }
             while (isActive) {
                 try {
                     val json  = JSONObject().apply {
@@ -77,9 +78,9 @@ class DiscoveryClient(
                         put("senderIp", localIp)
                     }.toString()
                     val bytes  = json.toByteArray(Charsets.UTF_8)
-                    val packet = DatagramPacket(bytes, bytes.size, broadcastAddr, discoveryPort)
+                    val packet = DatagramPacket(bytes, bytes.size, multicastGroup, discoveryPort)
                     sendSocket.send(packet)
-                    android.util.Log.d("DiscoveryClient", "Sent DISCOVER")
+                    android.util.Log.d("DiscoveryClient", "Sent DISCOVER to multicast group")
                 } catch (e: Exception) {
                     android.util.Log.w("DiscoveryClient", "Send error: ${e.message}")
                 }
