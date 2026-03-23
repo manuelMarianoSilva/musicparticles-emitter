@@ -1,3 +1,5 @@
+Check the repo for the [Receiver App](https://github.com/manuelMarianoSilva/musicparticles-receiver) in order to get the complete experience.
+
 # ✦ ParticleSystem — The Sender
 
 > *Your fingers are the instrument. The screen is the stage.*
